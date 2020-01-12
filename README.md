@@ -15,17 +15,16 @@ Example:
 import unplate
 def make_namecard(name):
   """ Simple template example. Return an ASCII-art namecard. """
-  # A template is one or more contiguous lines which all begin with '#$'
-  # The '#$>' on the line before marks the start of the template, but
-  # the newline will not appear in the final template.
-  # Expressions wrapped in {braces} will be evaluated.
-  greeting = #$>
-  #$ /----------------------------\
-  #$ |                            |
-  #$ |     Hello, my name is:     |
-  #$ |     { name.ljust(18) }     |
-  #$ |                            |
-  #$ \----------------------------/
+  # A template is opened with '#[' and closed with ']#'
+  # The floating '' is, unfortunately, required for now.
+  greeting = '' #[
+    # /----------------------------\
+    # |                            |
+    # |     Hello, my name is:     |
+    # |     { name.ljust(18) }     |
+    # |                            |
+    # \----------------------------/
+  #]
   return greeting
 ```
 
@@ -34,7 +33,7 @@ We compile the above code with `python3 -m unplate <file>`, which will produce t
 ```python3
 import unplate
 def make_namecard(name):
-  greeting = unplate.compile("""/----------------------------\\
+  greeting = '' + unplate.compile("""/----------------------------\\
 |                            |
 |     Hello, my name is:     |
 |     { name.ljust(18) }     |
