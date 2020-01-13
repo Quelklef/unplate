@@ -13,6 +13,13 @@ class Options:
     as using a prefix makes the code more explicit about what is and isn't
     a template.
 
+  allow_template_comment_outside_template
+    default: False
+    If False, throw an error if there is a comment that both starts with
+    the Unplate prefix but is not part of an Unplate template.
+    It is recommended to make this False unless the template comment
+    prefix is either '' or ' '.
+
   interpolation_left
     default: '{'
     The character marking the start of an interpolated expression in a template.
@@ -28,26 +35,24 @@ class Options:
   pattern
     default: 'unplate.template(\nTEMPLATE\n)'
     A string denoting the syntax for an Unplate template. The string MUST contain
-    a 'TEMPLATE' identifier, which represents where the template it expected.
+    a 'TEMPLATE' identifier, which represents where the template is expected.
 
-  pattern_tokens
+  pattern_tokens (read only)
     default: the tokens for 'unplate.template(\nTEMPLATE\n)'
     The tokens of the curent pattern.
-    This attribute MUST NOT be written to.
 
-  open_tokens
+  open_token (read only)
     default: the tokens for 'unplate.template('
     The tokens to the left of the 'TEMPLATE' token in template_pattern.
-    This attribute MUST NOT be written to.
 
-  close_tokens
+  close_tokens (read only)
     default: the tokens for ')'
     The tokens to the right of the 'TEMPLATE' token in template_pattern.
-    This attribute MUST NOT be written to.
 
   """
 
   def __init__(self):
+    self.allow_template_comment_outside_template = False
     self.pattern = 'unplate.template(\nTEMPLATE\n)'
     self.prefix = '$ '
     self.interpolation_left = '{'

@@ -90,9 +90,10 @@ def transform_tokens(tokens):
       template_tokens.append(token)
 
     elif is_template_comment(token):
-      # Template syntax is only allowed within templates
-      raise ParsingError(token.start, token.end,
-        f"Template comments (comments starting with '#{options.prefix}') are not allowed outside of templates.")
+      # Found a template comment outside of a templte
+      if not options.allow_template_comment_outside_template:
+        raise ParsingError(token.start, token.end,
+          f"Template comments (comments starting with '#{options.prefix}') are not allowed outside of templates.")
 
     else:
       # A token that has nothing to do with Unplate
