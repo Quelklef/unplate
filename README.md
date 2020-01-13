@@ -11,6 +11,8 @@ Unplate templates are written directly into Python code within comments, so that
 
 Example:
 
+(see `examples.py` for more examples)
+
 ```python3
 import unplate
 exec(unplate.magic(__file__))  # Where the magic happens
