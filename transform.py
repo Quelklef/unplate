@@ -119,7 +119,7 @@ def expand_template(tokens, *, file_loc):
     if token.type == tk.COMMENT:
       if not is_template_comment(token):
         raise UnplateSyntaxError.from_token(token, file_loc,
-          f"Comments denoting templates must be prefixed with '#{options.prefix}'.")
+          f"Comments denoting templates must be prefixed with '#{options.prefix}'. To change this prefix, set 'unplate.options.prefix' to something else.")
 
       return token.string[len('#' + options.prefix):]
 
