@@ -6,6 +6,13 @@ class Options:
 
   An object containing Unplate options. Contains the following attributes:
 
+  prefix
+    default: '$ '
+    The string after the comment hash ('#') that marks the coment as part of
+    an Unplate template. This may be set to '', but it is not recommended,
+    as using a prefix makes the code more explicit about what is and isn't
+    a template.
+
   interpolation_left
     default: '{'
     The character marking the start of an interpolated expression in a template.
@@ -42,10 +49,9 @@ class Options:
 
   def __init__(self):
     self.pattern = 'unplate.template(\nTEMPLATE\n)'
-
+    self.prefix = '$ '
     self.interpolation_left = '{'
     self.interpolation_right = '}'
-
     self.escape_char = '\\'
 
   @property

@@ -19,7 +19,7 @@ unplate.magic()
 
 # Templates still work:
 template = unplate.template(
-  # A working template!
+  #$ A working template!
 )
 
 print(template)

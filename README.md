@@ -17,10 +17,10 @@ exec(unplate.transform_file(__file__))  # Where the magic happens
 def make_namecard(name):
   """ Simple template example. Return an ASCII-art namecard. """
   greeting = unplate.template(
-    # /----------------------\
-    # |  Hello, my name is:  |
-    # |  { name.ljust(18) }  |
-    # \----------------------/
+    #$ /----------------------\
+    #$ |  Hello, my name is:  |
+    #$ |  { name.ljust(18) }  |
+    #$ \----------------------/
   )
   return greeting
 ```
@@ -68,10 +68,10 @@ versus
 ```python3
 def html_boilerplate(head, body):
     return unplate.template(
-        # <html>
-        #     <head>{head}</head>
-        #     <body>{body}</body>
-        # </html>
+        #$ <html>
+        #$     <head>{head}</head>
+        #$     <body>{body}</body>
+        #$ </html>
     )
 ```
 

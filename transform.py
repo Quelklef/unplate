@@ -31,6 +31,11 @@ def transform_code(code):
   return result_code
 
 
+def is_template_comment(token):
+  """ Is the token a comment that is part of an Unplate template? """
+  return token.type == tk.COMMENT and token.string.startswith('#' + options.prefix)
+
+
 def transform_tokens(tokens):
   """ Given an Python tokens that represent Python + Unplate code,
   compile the Unplate code and yield results.
@@ -61,7 +66,8 @@ def transform_tokens(tokens):
       if in_template:
         start = tokens[token_idx].start
         end = tokens[token_idx + len(options.open_tokens) - 1].end
-        raise ParsingError(start, end, "Cannot open a template when already in a template.")
+        raise ParsingError(start, end,
+          "Cannot open a template when already in a template.")
 
       else:
         # Skip over the opening sequence
@@ -83,6 +89,11 @@ def transform_tokens(tokens):
     elif in_template:
       template_tokens.append(token)
 
+    elif is_template_comment(token):
+      # Template syntax is only allowed within templates
+      raise ParsingError(token.start, token.end,
+        f"Template comments (comments starting with '#{options.prefix}') are not allowed outside of templates.")
+
     else:
       # A token that has nothing to do with Unplate
       yield token
@@ -96,11 +107,12 @@ def expand_template(tokens):
   """
 
   def parse_token(token):
-
     if token.type == tk.COMMENT:
-      if not token.string.startswith('# '):
-        raise ParsingError(token.start, token.end, "Unplate mandates spaces after template commends.")
-      return token.string[2:]
+      if not is_template_comment(token):
+        raise ParsingError(token.start, token.end,
+          f"Comments denoting templates must be prefixed with '#{options.prefix}'.")
+
+      return token.string[len('#' + options.prefix):]
 
     else:
       # e.g. NEWLINE
