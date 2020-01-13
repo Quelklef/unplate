@@ -14,9 +14,9 @@ unplate.options.interpolation_right = '>'
 unplate.options.escape_char = '~'
 
 template = unplate.template(
-  #> This: <1/2> will be interpolated
-  #> This: {1/2} no longer will be
-  #> This: ~<1/2~> will be escaped
+  #$ This: <1/2> will be interpolated
+  #$ This: {1/2} no longer will be
+  #$ This: ~<1/2~> will be escaped
 )
 print(template)
 
