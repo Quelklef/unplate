@@ -39,16 +39,42 @@ def make_namecard(name):
 
 Except the Unplate code is far prettier.
 
-## Notes of Interest:
+### Notes of Interest:
 
 1. The code-rewriting part of Unplate is pretty naive. This is on purpose. Code-rewriting is difficult and fragile, so Unplate keeps it to a minimum.
 
 2. The call to `unplate.magic` must be **exactly** the code `exec(unplate.magic(__file__))`. That is, the tokens must be equivalent.
 
-### Why not just use f-strings?
-As of now, these are the reasons:
-- Unplate allows you to control your indentation via where you place your comments.
-- Unplate allows for customizable syntax (see `examples.py`).
-- I personally had a bad experience trying to do this with f-strings, which is why I'm making this.
+## Why not just use f-strings?
 
-Unplate has more features to come, so this list will only grow!
+1. I personally had a bad experience trying to do this with f-strings, which is why I'm making this project.
+2. Unplate allows for customizable syntax (see `examples.py`).
+3. More things in the following example:
+
+Consider
+
+```python3
+def html_boilerplate(head, body):
+    return f"""
+        <html>
+            <head>{head}</head>
+            <body>{body></body>
+        </html>
+    """
+```
+
+versus
+
+```python3
+def html_boilerplate(head, body):
+    return unplate.template(
+        # <html>
+        #     <head>{head}</head>
+        #     <body>{body}</body>
+        # </html>
+    )
+```
+
+1. With f-strings, we get an unwanted extra 8 spaces of indentation on each line due to the indentation from `def` and `return`. The solution would be to dedent the HTML within the f-string, but that would look weird.
+2. With f-strings, you get an ugly unwanted leading and trailing newline. The results of `html_boilerplate(head, body)` look like: `"\n<html> ... </html>\n"`. Unplate doesn't have this problem.
+3. As I work on this project, more benefits should come!
