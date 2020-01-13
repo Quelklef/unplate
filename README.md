@@ -43,7 +43,7 @@ Except the Unplate code is far prettier.
 
 1. The code-rewriting part of Unplate is pretty naive. This is on purpose. Code-rewriting is difficult and fragile, so Unplate keeps it to a minimum.
 
-2. The call to `unplate.magic` must be **exactly** the code `exec(unplate.magic(__file__))`.
+2. The call to `unplate.transform_file` must be **exactly** the code `exec(unplate.transform_file(__file__))`.
 
 ## Why not just use f-strings?
 
@@ -55,24 +55,24 @@ Consider
 
 ```python3
 def html_boilerplate(head, body):
-    return f"""
-        <html>
-            <head>{head}</head>
-            <body>{body}</body>
-        </html>
-    """
+  return f"""
+    <html>
+      <head>{head}</head>
+      <body>{body}</body>
+    </html>
+  """
 ```
 
 versus
 
 ```python3
 def html_boilerplate(head, body):
-    return unplate.template(
-        #$ <html>
-        #$     <head>{head}</head>
-        #$     <body>{body}</body>
-        #$ </html>
-    )
+  return unplate.template(
+    #$ <html>
+    #$   <head>{head}</head>
+    #$   <body>{body}</body>
+    #$ </html>
+  )
 ```
 
 1. With f-strings, we get an unwanted extra 8 spaces of indentation on each line due to the indentation from `def` and `return`. The solution would be to dedent the HTML within the f-string, but that would look weird.
