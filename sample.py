@@ -1,5 +1,5 @@
 import unplate
-exec(unplate.transform_source(__file__))
+exec(unplate.magic(__file__))
 
 template = '' #[
   # I'm in a template,
