@@ -31,8 +31,8 @@ def transform_code(code):
   return result_code
 
 
-def transform_tokens(tokens, idx=0):
-  """ Given an iterator of Python tokes that represent Python + Unplate code,
+def transform_tokens(tokens):
+  """ Given an Python tokens that represent Python + Unplate code,
   compile the Unplate code and yield results.
   Results will be a mix of unmodified tokens and raw Python code as strings. """
 

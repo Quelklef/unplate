@@ -8,7 +8,7 @@ Most templating enginges try to do too much. Due to this, trying to do anything 
 
 ## Example
 
-There are more examples in `example.py`, but here's just one:
+There are more examples in `examples/`, but here's just one:
 
 ```python3
 import unplate
