@@ -7,26 +7,24 @@ Most templating engines are all about separation. Separate the engine from the l
 Unplate aims to avoid this by going the complete opposite direction: it aims to be as integrated into the host language as possible. This means that **Unplate automatically gets to use all features of the host programming language**. This breaks separation of the templating engine from the host language, which unplate is willing to accept. It does *not* break separation of content from display; unplate still encourages this, thought it does not enforce it.
 
 ## Usage
-Unplate templates are written directly into Python code within comments, so that syntax highlighting need not be changed. The Unplate script then compiles the comments back into working Python code, which should then be run as a normal Python script.
+Unplate templates are written directly into Python code within comments, so that syntax highlighting need not be changed. The Unplate script then compiles the comments back into working Python code, which should then be `exec()`'d.
 
 Example:
 
 ```python3
 import unplate
-exec(unplate.transform_source(__file__))  # Where the magic happens
+exec(unplate.magic(__file__))  # Where the magic happens
 
 def make_namecard(name):
   """ Simple template example. Return an ASCII-art namecard. """
-  # A template is opened with '#[' and closed with '#]'
-  # The floating '' is, unfortunately, required for now.
-  greeting = '' #[
+  greeting = unplate.template(
     # /----------------------------\
     # |                            |
     # |     Hello, my name is:     |
     # |     { name.ljust(18) }     |
     # |                            |
     # \----------------------------/
-  #]
+  )
   return greeting
 ```
 
@@ -35,7 +33,7 @@ The above code is functionally equivalent to the following:
 ```python3
 import unplate
 def make_namecard(name):
-  greeting = '' + unplate.compile("""/----------------------------\\
+  greeting = unplate.compile("""/----------------------------\\
 |                            |
 |     Hello, my name is:     |
 |     { name.ljust(18) }     |
@@ -45,8 +43,10 @@ def make_namecard(name):
 ```
 
 Which will behave as you probably expect it to.
-  
-As you can see, it's pretty naive. This is on purpose.
+
+As you can see, Unplate pretty naively compiles back into Python code. This is on purpose. The metaprogramming/macro aspect of Unplate is designed to be as minimal as possible because it's the place where the most can go wrong. Instead, most of the processing is done in `unplate.compile`.
+
+Note that **the call to `unplate.magic` must be exactly the code `exec(unplate.magic(__file__))`** (in particular, the tokens must be equivalent).
 
 ### Why not just use f-strings?
 Great question. As of right now, Unplate offers no functional benefit over f-string. However, it gets over a few Python lexical limitations:

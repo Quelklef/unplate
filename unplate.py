@@ -1,20 +1,53 @@
-import inspect
-import itertools as it
-import textwrap
 import tokenize as tk
+import itertools as it
 import io
 
-def flatten(xss):
-  """ Flatten one level of nesting """
-  return it.chain.from_iterable(xss)
+
+def tokenize_fragment(string):
+  """ Tokenize a string and remove the EOF and ALL newline tokens """
+
+  # generate tokens
+  fake_io = io.StringIO(string)
+  tokens = list(tk.generate_tokens(fake_io.readline))
+
+  # remove EOF
+  assert tokens[-1].type == tk.ENDMARKER
+  tokens = tokens[:-1]
+
+  # remove newlines
+  is_newline = lambda token: token.type == tk.NEWLINE
+  tokens = list(it.filterfalse(is_newline, tokens))
+
+  return tokens
+
+
+def detach_token(token):
+  """ Remove a token's positional information """
+  return tk.TokenInfo(
+    type   = token.type,
+    string = token.string,
+    start  = None,
+    end    = None,
+    line   = None,
+  )
+
+
+def next_n(it, n):
+  """ Repeat next() n times """
+  for _ in range(n):
+    next(it)
 
 
 class Options:
   def __init__(self):
 
-    # Template bounds
-    self.template_left = '['
-    self.template_right = ']'
+    # Tokens for opening a template
+    # TODO: it would be nice if the user could set,
+    #       say, options.template_code = "unplate.template(TEMPLATE)"
+    #       and it would auto-generate these two attributes.
+    template_call_tokens = tokenize_fragment('unplate.template(\nTEMPLATE\n)')
+    self.open_tokens = template_call_tokens[:-3]
+    self.close_tokens = template_call_tokens[-2:]
 
     # Interpolation characters
     self.interpolation_left = '{'
@@ -23,14 +56,6 @@ class Options:
     # Character for escaping interpolation characters
     # The escape character itself need not be escaped
     self.escape_char = '\\'
-
-  @property
-  def template_open(self):
-    return f'#{self.template_left}'
-
-  @property
-  def template_close(self):
-    return f'#{self.template_right}'
 
 options = Options()
 
@@ -42,8 +67,9 @@ class ParsingError(ValueError):
     self.end_loc = end_loc
 
   def __str__(self):
-    row, col = self.start_loc
-    return f"At ({row}, {col}): {self.message}"
+    row_0, col_0 = self.start_loc
+    row_f, col_f = self.end_loc
+    return f"At ({row_0}, {col_0}) through ({row_f}, {col_f}): {self.message}"
 
 
 def magic(source_code_loc):
@@ -58,9 +84,9 @@ def magic(source_code_loc):
   """
 
   with open(source_code_loc) as file:
-    tokens = tk.generate_tokens(file.readline)
-    transformed = transform_tokens(tokens)
-    result_code = tk.untokenize( (tok.type, tok.string) for tok in transformed )
+    tokens = list(tk.generate_tokens(file.readline))
+  transformed = list(transform_tokens(tokens))
+  result_code = tk.untokenize( (tok.type, tok.string) for tok in transformed )
 
   # Remove the top-level Unplate call
   # Weird-ass spacing is courtesy of untokenize
@@ -75,7 +101,7 @@ def magic(source_code_loc):
   return result_code
 
 
-def transform_tokens(token_it, idx=0):
+def transform_tokens(tokens, idx=0):
   """ Given an iterator of Python tokes that represent Python + Unplate code,
   compile the Unplate code and yield results.
   Results will be a mix of unmodified tokens and raw Python code as strings. """
@@ -86,23 +112,43 @@ def transform_tokens(token_it, idx=0):
   # Are we in a template?
   in_template = False
 
-  for token in token_it:
+  def prefix_is(prefix):
+    """ Do the upcoming tokens match the given prefix in content? """
+    # Match the length of upcoming
+    upcoming = tokens[token_idx:token_idx+len(prefix)]
+    # Detach tokens in both
+    upcoming = map(detach_token, upcoming)
+    prefix = map(detach_token, prefix)
+    # Check if equal
+    return list(upcoming) == list(prefix)
 
-    if token.type == tk.COMMENT and token.string.startswith(options.template_open):
+  token_enum = enumerate(tokens)
+  for token_idx, token in token_enum:
+
+    if prefix_is(options.open_tokens):
       # Found a template opener
+
       if in_template:
-        raise ParsingError(token.start, token.end, "Cannot open a template when already in a template.")
+        start = tokens[token_idx].start
+        end = tokens[token_idx + len(options.open_tokens) - 1].end
+        raise ParsingError(start, end, "Cannot open a template when already in a template.")
+
       else:
+        # Skip over the opening sequence
+        next_n(token_enum, len(options.open_tokens) - 1)
+        # Set state to in template
         template_tokens.clear()
         in_template = True
 
-    elif token.type == tk.COMMENT and token.string.startswith(options.template_close):
+    elif in_template and prefix_is(options.close_tokens):
       # Found a template closer
-      if not in_template:
-        raise ParsingError(token.start, token.end, "Cannot close a template when not in a template.")
-      else:
-        yield from expand_template(template_tokens)
-        in_template = False
+
+      # Calculate and yield results
+      yield from expand_template(template_tokens)
+      # Skip over closing sequence
+      next_n(token_enum, len(options.close_tokens) - 1)
+      # Set state to out of template
+      in_template = False
 
     elif in_template:
       template_tokens.append(token)
@@ -115,21 +161,20 @@ def transform_tokens(token_it, idx=0):
 def expand_template(tokens):
   """
   Expand Umplate source tokens into Python source tokens.
-  The source tokens will be "isolated", meaning that they will
+  The source tokens will be "detached", meaning that they will
   have None for their start, end, and line attributes.
   """
 
-  # Discard the open and closing tokens
-  tokens = tokens[1:-1]
-
   def parse_token(token):
-    if token.type != tk.COMMENT:
-      # e.g. newline tokens
-      return token.string
 
-    if not token.string.startswith('# '):
-      raise ParsingError(token.start, token.end, "Unplate mandates spaces after template commends.")
-    return token.string[2:]
+    if token.type == tk.COMMENT:
+      if not token.string.startswith('# '):
+        raise ParsingError(token.start, token.end, "Unplate mandates spaces after template commends.")
+      return token.string[2:]
+
+    else:
+      # e.g. NEWLINE
+      return token.string
 
   # Get the template string
   contents = ''.join(map(parse_token, tokens))
@@ -139,10 +184,8 @@ def expand_template(tokens):
   # Repr-out to Python source but preserve newlines and drop opening and closing quotes
   contents_python = repr(contents).replace('\\n', '\n')[1:-1]
   # Generate the tokens for target Python code
-  python_code = f' + unplate.compile("""\n{contents_python}\n"""[1:-1], locals()) '
-  fake_io = io.StringIO(python_code)
-  generated_tokens = tk.generate_tokens(fake_io.readline)
-  return generated_tokens
+  python_code = f' unplate.compile("""\n{contents_python}\n"""[1:-1], locals()) '
+  return tokenize_fragment(python_code)
 
 
 def compile(template, context):
@@ -233,3 +276,7 @@ def char_to_rowcol(string: str, target_idx: int):
       col = 0
     else:
       col += 1
+
+
+def template(*args, **kwargs):
+  raise Exception("Something's gone wrong. You should never actually invoke unplate.template().")
