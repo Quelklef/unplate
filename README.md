@@ -13,9 +13,11 @@ Example:
 
 ```python3
 import unplate
+exec(unplate.transform_source(__file__))  # Where the magic happens
+
 def make_namecard(name):
   """ Simple template example. Return an ASCII-art namecard. """
-  # A template is opened with '#[' and closed with ']#'
+  # A template is opened with '#[' and closed with '#]'
   # The floating '' is, unfortunately, required for now.
   greeting = '' #[
     # /----------------------------\
@@ -28,7 +30,7 @@ def make_namecard(name):
   return greeting
 ```
 
-We compile the above code with `python3 -m unplate <file>`, which will produce the following (non-functional code redacted):
+The above code is functionally equivalent to the following:
 
 ```python3
 import unplate
