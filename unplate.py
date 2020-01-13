@@ -193,7 +193,8 @@ def compile(template, context):
     elif char == options.interpolation_right:
       # Unescaped close interpolation
       if not in_expression:
-        raise ParsingError(char_to_rowcol(template, char_idx), None, f"Interpolation closing marker '{options.close_interpolation}' illegal here since we were not in an interpolated expression.")
+        poisiton = char_to_rowcol(template, char_idx)
+        raise ParsingError(position, position, f"Interpolation closing marker '{options.close_interpolation}' illegal here since we were not in an interpolated expression.")
 
       # Switch states
       in_expression = False
