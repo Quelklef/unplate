@@ -1,14 +1,20 @@
 import tokenize as tk
 import itertools as it
+import inspect
 import io
+
+
+def tokenize_string(string):
+  # generate tokens
+  fake_io = io.StringIO(string)
+  tokens = list(tk.generate_tokens(fake_io.readline))
+
+  return tokens
 
 
 def tokenize_fragment(string):
   """ Tokenize a string and remove the EOF and ALL newline tokens """
-
-  # generate tokens
-  fake_io = io.StringIO(string)
-  tokens = list(tk.generate_tokens(fake_io.readline))
+  tokens = tokenize_string(string)
 
   # remove EOF
   assert tokens[-1].type == tk.ENDMARKER
@@ -36,6 +42,12 @@ def next_n(it, n):
   """ Repeat next() n times """
   for _ in range(n):
     next(it)
+
+
+def remove_line(string, line_idx):
+  lines = string.split('\n')
+  lines.pop(line_idx)
+  return '\n'.join(lines)
 
 
 class Options:
@@ -72,7 +84,33 @@ class ParsingError(ValueError):
     return f"At ({row_0}, {col_0}) through ({row_f}, {col_f}): {self.message}"
 
 
-def magic(source_code_loc):
+def magic():
+  """ Magic alternative to exec(unplate.transform_file(__file__)) """
+  caller_frameinfo = inspect.stack()[1]
+  caller_frame     = caller_frameinfo.frame
+  frame_members    = dict(inspect.getmembers(caller_frame))
+  caller_lineno    = caller_frameinfo.lineno
+  caller_filename  = caller_frameinfo.filename
+  caller_locals    = frame_members['f_locals']
+  caller_globals   = frame_members['f_globals']
+
+  with open(caller_filename) as f:
+    code = f.read()
+
+  # Remove the calling code
+  # TODO: instead of doing this, perhaps we should have
+  #       all calls to top-level entrypoints beyond the first
+  #       be noops?
+  caller_line_idx = caller_lineno - 1
+  code = remove_line(code, caller_line_idx)
+
+  transformed = transform_code(code)
+  exec(transformed, caller_globals, caller_locals)
+
+  quit()
+
+
+def transform_file(file_loc):
   """
   Main entry point of unplate.
 
@@ -80,24 +118,28 @@ def magic(source_code_loc):
   into native Python source code.
 
   Call EXACTLY like this:
-    exec(unplate.transform_source(__file__))
+    exec(unplate.transform_file(__file__))
   """
 
-  with open(source_code_loc) as file:
-    tokens = list(tk.generate_tokens(file.readline))
-  transformed = list(transform_tokens(tokens))
-  result_code = tk.untokenize( (tok.type, tok.string) for tok in transformed )
+  with open(file_loc) as f:
+    code = f.read()
 
-  # Remove the top-level Unplate call
-  # Weird-ass spacing is courtesy of untokenize
-  unplate_call = 'exec (unplate .magic (__file__ ))'
-  assert unplate_call in result_code, "Something fucky is about"
-  result_code = result_code.replace(unplate_call, '')
+  # Remove the calling code
+  unplate_call = 'exec(unplate.transform_file(__file__))'
+  assert unplate_call in code
+  code = code.replace(unplate_call, '')
 
   # Don't run the original code after the caller's exec() call
   # TODO: What if this gets commented out, e.g. by a multiline string?
-  result_code += "\n\nquit()"
+  code += "\n\nquit()"
 
+  return transform_code(code)
+
+
+def transform_code(code):
+  tokens = tokenize_string(code)
+  transformed = list(transform_tokens(tokens))
+  result_code = tk.untokenize( (tok.type, tok.string) for tok in transformed )
   return result_code
 
 

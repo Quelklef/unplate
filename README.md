@@ -12,7 +12,7 @@ There are more examples in `example.py`, but here's just one:
 
 ```python3
 import unplate
-exec(unplate.magic(__file__))  # Where the magic happens
+exec(unplate.transform_file(__file__))  # Where the magic happens
 
 def make_namecard(name):
   """ Simple template example. Return an ASCII-art namecard. """
@@ -43,7 +43,7 @@ Except the Unplate code is far prettier.
 
 1. The code-rewriting part of Unplate is pretty naive. This is on purpose. Code-rewriting is difficult and fragile, so Unplate keeps it to a minimum.
 
-2. The call to `unplate.magic` must be **exactly** the code `exec(unplate.magic(__file__))`. That is, the tokens must be equivalent.
+2. The call to `unplate.magic` must be **exactly** the code `exec(unplate.magic(__file__))`.
 
 ## Why not just use f-strings?
 

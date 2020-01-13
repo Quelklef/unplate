@@ -1,5 +1,12 @@
 import unplate
-exec(unplate.magic(__file__))
+
+# Two ways to call unplate.
+# One is more magic:
+#   unplate.magic()
+# but may not work on all implementations.
+# The other is more stable:
+#   exec(unplate.transform_file(__file__))
+exec(unplate.transform_file(__file__))
 
 poem = unplate.template(
   # I'm in a template,
