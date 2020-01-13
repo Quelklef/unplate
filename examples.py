@@ -1,5 +1,7 @@
 import unplate
 
+# == Initialization == #
+
 # Two ways to call unplate.
 # One is more magic:
 #   unplate.magic()
@@ -7,6 +9,9 @@ import unplate
 # The other is more stable:
 #   exec(unplate.transform_file(__file__))
 exec(unplate.transform_file(__file__))
+
+
+# == Examples == #
 
 poem = unplate.template(
   # I'm in a template,
@@ -34,6 +39,8 @@ escapes = unplate.template(
 )
 print(f'\n= Escapes =\n{escapes}')
 
+
+# == Flexibility == #
 
 # you can also change the escape character as
 # well as the interpolation characters

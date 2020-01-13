@@ -27,6 +27,13 @@ def tokenize_fragment(string):
   return tokens
 
 
+def tokenize_one(string):
+  """ Tokenize a string into one token """
+  tokens = tokenize_fragment(string)
+  assert len(tokens) == 1
+  return tokens[0]
+
+
 def detach_token(token):
   """ Remove a token's positional information """
   return tk.TokenInfo(
@@ -50,24 +57,78 @@ def remove_line(string, line_idx):
   return '\n'.join(lines)
 
 
+def find(it, pred):
+  """ Return index of first item satisfying predicate """
+  for i, x in enumerate(it):
+    if pred(x):
+      return i
+  raise ValueError("No matching value found.")
+
+
 class Options:
+  """
+
+  An object containing Unplate options. Contains the following attributes:
+
+  interpolation_left
+    default: '{'
+    The character marking the start of an interpolated expression in a template.
+
+  interpolation_right
+    default: '}'
+    The character marking the end of an interpolated expresssion in a template
+
+  escape_char
+    default: '\\'
+    The character used to escape the left and right interpolation characters
+
+  pattern
+    default: 'unplate.template(\nTEMPLATE\n)'
+    A string denoting the syntax for an Unplate template. The string MUST contain
+    a 'TEMPLATE' identifier, which represents where the template it expected.
+
+  pattern_tokens
+    default: the tokens for 'unplate.template(\nTEMPLATE\n)'
+    The tokens of the curent pattern.
+    This attribute MUST NOT be written to.
+
+  open_tokens
+    default: the tokens for 'unplate.template('
+    The tokens to the left of the 'TEMPLATE' token in template_pattern.
+    This attribute MUST NOT be written to.
+
+  close_tokens
+    default: the tokens for ')'
+    The tokens to the right of the 'TEMPLATE' token in template_pattern.
+    This attribute MUST NOT be written to.
+
+  """
+
   def __init__(self):
+    self.pattern = 'unplate.template(\nTEMPLATE\n)'
 
-    # Tokens for opening a template
-    # TODO: it would be nice if the user could set,
-    #       say, options.template_code = "unplate.template(TEMPLATE)"
-    #       and it would auto-generate these two attributes.
-    template_call_tokens = tokenize_fragment('unplate.template(\nTEMPLATE\n)')
-    self.open_tokens = template_call_tokens[:-3]
-    self.close_tokens = template_call_tokens[-2:]
-
-    # Interpolation characters
     self.interpolation_left = '{'
     self.interpolation_right = '}'
 
-    # Character for escaping interpolation characters
-    # The escape character itself need not be escaped
     self.escape_char = '\\'
+
+  @property
+  def pattern(self):
+    return self._pattern
+
+  @pattern.setter
+  def pattern(self, pattern):
+    self._pattern = pattern
+    self.pattern_tokens = tokenize_fragment(self._pattern)
+
+    body_marker = tokenize_one('TEMPLATE')
+    def eqs_body_marker(token):
+      return detach_token(body_marker) == detach_token(token)
+    marker_idx = find(self.pattern_tokens, eqs_body_marker)
+
+    self.open_tokens = self.pattern_tokens[:marker_idx]
+    self.close_tokens = self.pattern_tokens[marker_idx+1:]
+
 
 options = Options()
 
@@ -98,15 +159,15 @@ def magic():
     code = f.read()
 
   # Remove the calling code
-  # TODO: instead of doing this, perhaps we should have
-  #       all calls to top-level entrypoints beyond the first
-  #       be noops?
+  # TODO: instead of doing this, perhaps we should have all calls
+  #       to top-level entrypoints beyond the first be noops?
   caller_line_idx = caller_lineno - 1
   code = remove_line(code, caller_line_idx)
 
   transformed = transform_code(code)
   exec(transformed, caller_globals, caller_locals)
 
+  # TODO: quit() exits the program, not just the module
   quit()
 
 
@@ -220,8 +281,6 @@ def expand_template(tokens):
 
   # Get the template string
   contents = ''.join(map(parse_token, tokens))
-
-  # TODO: repr() might not be strong enough
 
   # Repr-out to Python source but preserve newlines and drop opening and closing quotes
   contents_python = repr(contents).replace('\\n', '\n')[1:-1]
