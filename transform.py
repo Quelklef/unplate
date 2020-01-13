@@ -11,22 +11,32 @@ into native Python source code.
 
 """
 
-class ParsingError(ValueError):
-  def __init__(self, start_loc, end_loc, message):
-    self.message = message
-    self.start_loc = start_loc
-    self.end_loc = end_loc
+class UnplateSyntaxError(SyntaxError):
+  def __init__(self, file_loc, lineno, offset, text, message):
+    super().__init__(message)
 
-  def __str__(self):
-    row_0, col_0 = self.start_loc
-    row_f, col_f = self.end_loc
-    return f"At ({row_0}, {col_0}) through ({row_f}, {col_f}): {self.message}"
+    # Inherited attributes
+    self.filename = file_loc
+    self.lineno   = lineno
+    self.offset   = offset
+    self.text     = text
+
+  @staticmethod
+  def from_token(token, file_loc, message):
+    """ Make an UnplateSyntaxError using the information from a token """
+    return UnplateSyntaxError(
+      file_loc = file_loc,
+      lineno   = token.start[0],
+      offset   = token.start[1],
+      text     = token.string,
+      message  = message,
+    )
 
 
-def transform_code(code):
+def transform_code(code, *, file_loc):
   """ Transform Python + Unplate source into native Python source """
   tokens = tokenize_string(code)
-  transformed = list(transform_tokens(tokens))
+  transformed = list(transform_tokens(tokens, file_loc=file_loc))
   result_code = tk.untokenize( (tok.type, tok.string) for tok in transformed )
   return result_code
 
@@ -36,7 +46,7 @@ def is_template_comment(token):
   return token.type == tk.COMMENT and token.string.startswith('#' + options.prefix)
 
 
-def transform_tokens(tokens):
+def transform_tokens(tokens, *, file_loc):
   """ Given an Python tokens that represent Python + Unplate code,
   compile the Unplate code and yield results.
   Results will be a mix of unmodified tokens and raw Python code as strings. """
@@ -64,9 +74,7 @@ def transform_tokens(tokens):
       # Found a template opener
 
       if in_template:
-        start = tokens[token_idx].start
-        end = tokens[token_idx + len(options.open_tokens) - 1].end
-        raise ParsingError(start, end,
+        raise UnplateSyntaxError.from_token(token, file_loc,
           "Cannot open a template when already in a template.")
 
       else:
@@ -80,7 +88,7 @@ def transform_tokens(tokens):
       # Found a template closer
 
       # Calculate and yield results
-      yield from expand_template(template_tokens)
+      yield from expand_template(template_tokens, file_loc=file_loc)
       # Skip over closing sequence
       util.next_n(token_enum, len(options.close_tokens) - 1)
       # Set state to out of template
@@ -92,15 +100,15 @@ def transform_tokens(tokens):
     elif is_template_comment(token):
       # Found a template comment outside of a templte
       if not options.allow_template_comment_outside_template:
-        raise ParsingError(token.start, token.end,
-          f"Template comments (comments starting with '#{options.prefix}') are not allowed outside of templates.")
+        raise UnplateSyntaxError.from_token(token, file_loc,
+          f"Template comments (comments starting with '#{options.prefix}') are not allowed outside of templates. This behavior may be changed by setting 'unplate.options.allow_template_comment_outside_template' to 'True'.")
 
     else:
       # A token that has nothing to do with Unplate
       yield token
 
 
-def expand_template(tokens):
+def expand_template(tokens, *, file_loc):
   """
   Expand Umplate source tokens into Python source tokens.
   The source tokens will be "detached", meaning that they will
@@ -110,7 +118,7 @@ def expand_template(tokens):
   def parse_token(token):
     if token.type == tk.COMMENT:
       if not is_template_comment(token):
-        raise ParsingError(token.start, token.end,
+        raise UnplateSyntaxError.from_token(token, file_loc,
           f"Comments denoting templates must be prefixed with '#{options.prefix}'.")
 
       return token.string[len('#' + options.prefix):]

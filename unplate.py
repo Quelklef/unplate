@@ -18,21 +18,21 @@ def magic():
   caller_frameinfo = inspect.stack()[1]
   caller_frame     = caller_frameinfo.frame
   frame_members    = dict(inspect.getmembers(caller_frame))
-  caller_lineno    = caller_frameinfo.lineno
-  caller_filename  = caller_frameinfo.filename
+  caller_line_no   = caller_frameinfo.line_no
+  caller_file_loc  = caller_frameinfo.file_loc
   caller_locals    = frame_members['f_locals']
   caller_globals   = frame_members['f_globals']
 
-  with open(caller_filename) as f:
+  with open(caller_file_loc) as f:
     code = f.read()
 
   # Remove the calling code
   # TODO: instead of doing this, perhaps we should have all calls
   #       to top-level entrypoints beyond the first be noops?
-  caller_line_idx = caller_lineno - 1
+  caller_line_idx = caller_line_no - 1
   code = util.remove_line(code, caller_line_idx)
 
-  transformed = transform_code(code)
+  transformed = transform_code(code, file_loc=caller_file_loc)
   exec(transformed, caller_globals, caller_locals)
 
   # TODO: quit() exits the program, not just the module
@@ -62,7 +62,7 @@ def transform_file(file_loc):
   # TODO: What if this gets commented out, e.g. by a multiline string?
   code += "\n\nquit()"
 
-  return transform_code(code)
+  return transform_code(code, file_loc=file_loc)
 
 
 def compile(template, context):
