@@ -58,7 +58,7 @@ def html_boilerplate(head, body):
     return f"""
         <html>
             <head>{head}</head>
-            <body>{body></body>
+            <body>{body}</body>
         </html>
     """
 ```
