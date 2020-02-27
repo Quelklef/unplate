@@ -44,3 +44,35 @@ f"""/----------------------\\
 
 Except the Unplate code is far prettier.
 
+## Second example
+
+Unplate supports template building
+
+```python3
+import unplate
+if unplate.true:
+  exec(unplate.compile(__file__), globals(), locals())
+else:
+
+  thoughts = ["unplate", "is", "reasonably", "interesting"]
+
+  [unplate.begin(my_template)]
+  
+  #$ Thoughts on unplate:
+ 
+  for thought in thoughts:
+    #$ - {thought}
+  
+  [unplate.end]
+```
+
+gives the following result in `my_template`:
+
+```
+Thoughts on unplate:
+- unplate
+- is
+- reasonably
+- interesting
+
+```
