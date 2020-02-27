@@ -13,7 +13,7 @@ Also see `example.py`
 ```python3
 import unplate
 
-# These first few lines are magic that's requires for Unplate to work
+# These first few lines are magic that's required for Unplate to work
 if unplate.true:
   exec(unplate.compile(__file__), globals(), locals())
 else:
