@@ -45,9 +45,9 @@ def compile(file_loc):
 
   # Remove the wrapper
   unplate_wrapper = tku.tokenize_expr('unplate.true')
-  assert tku.has_sublist(compiled_tokens, unplate_wrapper, eq=tku.content_eq)
+  assert tku.has_sublist(compiled_tokens, unplate_wrapper)
   true_token = tku.tokenize_one('False')
-  compiled_tokens = tku.replace_sublist(compiled_tokens, unplate_wrapper, [true_token], eq=tku.content_eq)
+  compiled_tokens = tku.replace_sublist(compiled_tokens, unplate_wrapper, [true_token])
 
   compiled_code = tku.untokenize(compiled_tokens)
   return compiled_code

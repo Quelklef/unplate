@@ -4,10 +4,40 @@ import operator
 import io
 
 
+class dtok(tk.TokenInfo):
+  """
+  Represents a "detached" token, which is just
+  like a regular token but doesn't care about its
+  positional information.
+
+  This entire module uses dtoks instead of
+  tokenize.TokenInfo instances.
+  """
+
+  def __eq__(self, other):
+    return self.type == other.type and self.string == other.string
+    if self.type != other.type:
+      return False
+
+  def __str__(self):
+    return f"{self.type}({repr(self.string)})"
+
+  @staticmethod
+  def from_token(token):
+    return dtok(
+      token.type,
+      token.string,
+      token.start,
+      token.end,
+      token.line,
+    )
+
+
 def tokenize_string(string):
   fake_io = io.StringIO(string)
   tokens = list(tk.generate_tokens(fake_io.readline))
-  return tokens
+  dtoks = [dtok.from_token(tok) for tok in tokens]
+  return dtoks
 
 
 def tokenize_stmt(string):
@@ -50,38 +80,19 @@ def untokenize(tokens):
   return tk.untokenize( (tok.type, tok.string) for tok in tokens )
 
 
-def detach_token(token):
-  """ Remove a token's positional information """
-  return tk.TokenInfo(
-    type   = token.type,
-    string = token.string,
-    start  = None,
-    end    = None,
-    line   = None,
-  )
-
-
-def content_eq(tokenA, tokenB):
-  return detach_token(tokenA) == detach_token(tokenB)
-
-
-def list_eq(li1, li2, eq=operator.eq):
-  return len(li1) == len(li2) and all( eq(li1[i], li2[i]) for i in range(len(li1)) )
-
-
-def has_sublist(superlist, sublist, eq=operator.eq):
+def has_sublist(superlist, sublist):
   """
   Does a list contain another list within it?
   Not very efficient.
   If 'eq' is given, this will be used to compare items.
   """
   return any(
-    list_eq(superlist[i : i + len(sublist)], sublist, eq=eq)
+    superlist[i : i + len(sublist)] == sublist
     for i in range(len(superlist) - len(sublist) + 1)
   )
 
 
-def replace_sublist(li, target, replacement, eq=operator.eq):
+def replace_sublist(li, target, replacement):
   """
   Replace a sublist with another sublist.
   Not very effcient.
@@ -90,7 +101,7 @@ def replace_sublist(li, target, replacement, eq=operator.eq):
   result = []
   i = 0
   while i < len(li):
-    if list_eq(li[i : i + len(target)], target, eq=eq):
+    if li[i : i + len(target)] == target:
       i += len(target)
       result.extend(replacement)
     else:
@@ -99,24 +110,13 @@ def replace_sublist(li, target, replacement, eq=operator.eq):
   return result
 
 
-def remove_sublist(li1, li2, eq=operator.eq):
+def remove_sublist(li1, li2):
   """
   Remove all contiguous instances of one array from another.
   Not very efficient.
   If 'eq' is given, this will be used to compare items.
   """
-  return replace_sublist(li1, li2, [], eq=eq)
-
-
-def prefix_is(tokens, prefix):
-  """ Do the upcoming tokens match the given prefix in content? """
-  # Match the length of upcoming
-  upcoming = tokens[:len(prefix)]
-  # Detach tokens in both
-  upcoming = map(detach_token, upcoming)
-  prefix = map(detach_token, prefix)
-  # Check if equal
-  return list(upcoming) == list(prefix)
+  return replace_sublist(li1, li2, [])
 
 
 def split_pattern(pattern_toks, marker):
@@ -131,7 +131,6 @@ def split_pattern(pattern_toks, marker):
     prefix is the tokens for "list["
     suffix is the tokens for "]"
   """
-  pattern_toks = list(map(detach_token, pattern_toks))
-  marker_tok = detach_token(tokenize_one(marker))
+  marker_tok = tokenize_one(marker)
   marker_idx = pattern_toks.index(marker_tok)
   return pattern_toks[:marker_idx], pattern_toks[marker_idx+1:]

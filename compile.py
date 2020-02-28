@@ -122,7 +122,7 @@ def read_template_comments(tokens):
 
 
 def consume_prefix(tokens, literal):
-  if not tku.prefix_is(tokens, literal):
+  if not util.prefix_is(tokens, literal):
     expected = tku.untokenize(literal)
     actual = tku.untokenize(tokens[:len(literal)])
     raise UnplateSyntaxError.from_token(tokens[0], f"Expected: {repr(expected)} but got {repr(actual)}")
@@ -181,7 +181,7 @@ def compile_template_builder(tokens):
       statement = prefix + compiled_toks + suffix
       compiled.extend(statement)
 
-    if tku.prefix_is(tokens, parameters.template_builder_close):
+    if util.prefix_is(tokens, parameters.template_builder_close):
       tokens = consume_prefix(tokens, parameters.template_builder_close)
       break
 
@@ -204,11 +204,11 @@ def compile_tokens(tokens):
 
   while tokens:
 
-    if tku.prefix_is(tokens, parameters.template_literal_open):
+    if util.prefix_is(tokens, parameters.template_literal_open):
       compiled_toks, tokens = compile_template_literal(tokens)
       compiled.extend(compiled_toks)
 
-    elif tku.prefix_is(tokens, parameters.template_builder_open_left):
+    elif util.prefix_is(tokens, parameters.template_builder_open_left):
       compiled_toks, tokens = compile_template_builder(tokens)
       compiled.extend(compiled_toks)
 
