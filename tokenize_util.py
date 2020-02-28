@@ -80,45 +80,6 @@ def untokenize(tokens):
   return tk.untokenize( (tok.type, tok.string) for tok in tokens )
 
 
-def has_sublist(superlist, sublist):
-  """
-  Does a list contain another list within it?
-  Not very efficient.
-  If 'eq' is given, this will be used to compare items.
-  """
-  return any(
-    superlist[i : i + len(sublist)] == sublist
-    for i in range(len(superlist) - len(sublist) + 1)
-  )
-
-
-def replace_sublist(li, target, replacement):
-  """
-  Replace a sublist with another sublist.
-  Not very effcient.
-  If 'eq' is given, this will be used to compare items.
-  """
-  result = []
-  i = 0
-  while i < len(li):
-    if li[i : i + len(target)] == target:
-      i += len(target)
-      result.extend(replacement)
-    else:
-      result.append(li[i])
-      i += 1
-  return result
-
-
-def remove_sublist(li1, li2):
-  """
-  Remove all contiguous instances of one array from another.
-  Not very efficient.
-  If 'eq' is given, this will be used to compare items.
-  """
-  return replace_sublist(li1, li2, [])
-
-
 def split_pattern(pattern_toks, marker):
   """
   Take a pattern and a marker, which are both snippets of Python code.

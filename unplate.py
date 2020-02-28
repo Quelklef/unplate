@@ -1,5 +1,6 @@
 import compile as unplate_compile
 import tokenize_util as tku
+import util
 
 def template(*args, **kwargs):
   raise Exception("Something's gone wrong. You should never actually invoke unplate.template().")
@@ -45,9 +46,9 @@ def compile(file_loc):
 
   # Remove the wrapper
   unplate_wrapper = tku.tokenize_expr('unplate.true')
-  assert tku.has_sublist(compiled_tokens, unplate_wrapper)
+  assert util.has_sublist(compiled_tokens, unplate_wrapper)
   true_token = tku.tokenize_one('False')
-  compiled_tokens = tku.replace_sublist(compiled_tokens, unplate_wrapper, [true_token])
+  compiled_tokens = util.replace_sublist(compiled_tokens, unplate_wrapper, [true_token])
 
   compiled_code = tku.untokenize(compiled_tokens)
   return compiled_code
