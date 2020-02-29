@@ -9,21 +9,17 @@ else:
 
   # Template literals are denoted with unplate.template()
   template_0 = unplate.template(
-    #" I'm a template literal
-    #" line two
+    # I'm a template literal
+    # line two
   )
-  assert template_0 == "I'm a template literal\nline two\n"
+  assert template_0 == "I'm a template literal\nline two\n", repr(template_0)
 
-  # The " at the beginning of the comment notes that the
-  # template is 'verbatim', i.e. all of its contents will
-  # be interpreted literally.
-
-  # Interpolation is supported by using '$' instead:
+  # Interpolation is supported
   value = 'interpolation'
   template_1 = unplate.template(
-    #$ Unplate supports {value}
+    # Unplate supports {value}
   )
-  assert template_1 == 'Unplate supports interpolation\n'
+  assert template_1 == 'Unplate supports interpolation\n', repr(template_1)
 
   # The semantics of interpolated templates match
   # those of Python f-strings.
@@ -34,28 +30,15 @@ else:
   # template builders:
 
   [unplate.begin(template_2)]
-
-  #" A line
-  #" A second line
-
-  for i in range(3):
-    pass
-    #$ line #{i + 1}
-
-  if True:
-    pass
-    #" I will be added
-
-  if False:
-    pass
-    #" I will not
-
-  # Unfortunately, due to Python parsing oddities, the
-  # template comment MUST come after the 'pass' statement
-
+  # One line
+  # Two line
+  # >>> for color in ['red', 'blue']:
+    # >>> capitalized = color.capitalize()
+    # {capitalized} line
+  # <<<
   [unplate.end]
 
-  assert template_2 == "A line\nA second line\nline #1\nline #2\nline #3\nI will be added\n", repr(template_2)
+  assert template_2 == "One line\nTwo line\nRed line\nBlue line\n", repr(template_2)
 
   # the [braces] around 'unplate.begin()' and 'unplate.end()' do
   # not denote lists or anything like that. They are simply

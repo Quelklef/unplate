@@ -15,12 +15,42 @@ class dtok(tk.TokenInfo):
   """
 
   def __eq__(self, other):
-    return self.type == other.type and self.string == other.string
+
     if self.type != other.type:
       return False
 
+    # Types for which the content should be compared
+    contentful = [
+      tk.NAME,
+      tk.NUMBER,
+      tk.STRING,
+      # not 100% sure about these other ones
+      #tk.TYPE_COMMENT,
+      tk.ERRORTOKEN,
+      tk.N_TOKENS,
+      tk.NT_OFFSET,
+      tk.ENCODING,
+    ]
+
+    if self.type in contentful:
+      return self.string == other.string
+    else:
+      return True
+
   def __str__(self):
     return f"{self.type}({repr(self.string)})"
+
+  def __repr__(self):
+    return f"dtok.new({tk.tok_name[self.type]}, {repr(self.string)})"
+
+  @staticmethod
+  def new(type, string):
+    """
+    Construct a dtoken.
+    This method exists because __init__ cannot effectively be
+    overrid when subclassing a NamedTuple (as far as I know)
+    """
+    return dtok(type, string, None, None, None)
 
   @staticmethod
   def from_token(token):

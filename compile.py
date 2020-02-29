@@ -61,64 +61,37 @@ def compile_top(tokens, *, file_loc):
   return compiled
 
 
-def is_template_comment(token):
-  """ Is the token a comment that is part of an Unplate template? """
-
-  prefixes = [parameters.interpolation_prefix, parameters.verbatim_prefix]
-
-  return token.type == tk.COMMENT and any(
-    token.string.startswith('#' + prefix)
-    for prefix in prefixes
-  )
-
-
-def read_template_comments(tokens):
+def read_template_body(tokens):
   """
-  Consume one or more contiguous template comments and finds the the body code as a string.
-  So for tokens representing
-
-    #$ line one
-    #$ line two
-
-  finds the string "line one\nline two\n"
-
-  Returns a 3-tuple (content, prefix, tokens) where
-    content: is the contained string "line one\nline two\n"
-    prefix: is the comment prefix, e.g. '$'
-    tokens: are the remaining tokens
-
+  Consume one or more contiguous comments, or a single string.
+  Find the containd text.
   """
-  template_comments_and_newlines = list(it.takewhile(
-    lambda tok: tok.type == tk.NL or is_template_comment(tok),
+
+  if tokens[0].type == tk.STRING:
+    return tokens[0].string, tokens[1:]
+
+  comment_block = list(it.takewhile(
+    lambda tok: tok.type in [tk.NL, tk.COMMENT],
     tokens
   ))
 
-  # remove newlines
-  template_comments = [
-    token for token in template_comments_and_newlines
-    if token.type == tk.COMMENT
-  ]
+  comments = [tok for tok in comment_block if tok.type is tk.COMMENT]
 
-  if not template_comments:
-    raise UnplateSyntaxError.from_token(tokens[0],
-      "Expected a template comment but found none.")
+  # [2:] to strip leading space
+  lines = [comment.string[2:] for comment in comments]
+  rest_tokens = tokens[len(comment_block):]
+  return lines, rest_tokens
 
-  # Ensure that all the comments have the same prefix
-  # TODO: assumes that prefixes are two characters
-  expected_prefix = template_comments[0].string[1:3]
-  for comment in template_comments:
-    prefix = comment.string[1:3]
-    if prefix != expected_prefix:
-      raise UnplateSyntaxError.from_token(comment,
-        f"Expected prefix '{expected_prefix}' since that's what preceded, but got prefix '{prefix}'")
 
-  # Stich together contents
-  # TODO: assumes that prefixes are two characters
-  texts = [comment.string[3:] for comment in template_comments]
-  result = ''.join(text + '\n' for text in texts)
-
-  rest_tokens = tokens[len(template_comments_and_newlines):]
-  return result, expected_prefix, rest_tokens
+def repr_template_content(string):
+  """
+  repr-out a string but preserve newlines.
+  Intended for use injecting the content of a template back
+  into the python source.
+  """
+  inner = repr(string).replace('\\n', '\n')[1:-1]
+  # TODO: not sure where to place the "make this an f-string" bit of code
+  return f'f"""{inner}"""'
 
 
 def consume_prefix(tokens, literal):
@@ -129,66 +102,87 @@ def consume_prefix(tokens, literal):
   return tokens[len(literal):]
 
 
-def compile_template_comments(tokens):
-  content, prefix, tokens = read_template_comments(tokens)
-
-  # repr-out to Python source but preserve newlines and strip quotes
-  content_python = repr(content).replace('\\n', '\n')[1:-1]
-
-  # Generate the python code
-  if prefix == parameters.interpolation_prefix:
-    compiled_code = f'f"""{content_python}"""'
-  elif prefix == parameters.verbatim_prefix:
-    compiled_code = f'"""{content_python}"""'
-  else:
-    raise RuntimeError(f"Programmer forgot a case: '{prefix}'")
-
-  compiled = tku.tokenize_expr(compiled_code)
-  return compiled, tokens
-
-
 def compile_template_literal(tokens):
   tokens = consume_prefix(tokens, parameters.template_literal_open)
-  compiled, tokens = compile_template_comments(tokens)
+  lines, tokens = read_template_body(tokens)
   tokens = consume_prefix(tokens, parameters.template_literal_close)
+
+  content = ''.join(line + '\n' for line in lines)
+  compiled = tku.tokenize_expr(repr_template_content(content))
+
   # Pad compiled code to preserve line numbers
   pad = tku.tokenize_expr('(\n)')
   compiled = pad[:2] + compiled + pad[2:]
+
   return compiled, tokens
 
 
-def compile_template_builder(tokens):
+def compile_template_builder(tokens, indents):
+  """
+  Consume and compile a template builder construct ala
+
+    [unplate.begin(template_name)]
+    # One line
+    # Two line
+    # >>> for color in ['red', 'blue']:
+      # >>> capitalized = color.upper()
+      # {color} line
+    # <<<
+    [unplate.end]
+
+  Requires the indent stack.
+  """
+
+  indents = indents[:]
 
   compiled = []
 
   tokens = consume_prefix(tokens, parameters.template_builder_open_left)
   # get the name of the result template
-  variable_name = tokens.pop(0).string
+  template_name = tokens.pop(0).string
   tokens = consume_prefix(tokens, parameters.template_builder_open_right)
 
-  init_statement = tku.tokenize_stmt(f"{variable_name} = []\n")
+  init_statement = tku.tokenize_stmt(f"{template_name} = []\n")
   compiled.extend(init_statement)
 
-  while tokens:
+  # Consume trailing newline
+  while tokens[0].type == tk.NEWLINE:
+    tokens.pop(0)
 
-    # template comments now get compiled into statements adding onto the builder
-    if is_template_comment(tokens[0]):
-      compiled_toks, tokens = compile_template_comments(tokens)
+  lines, tokens = read_template_body(tokens)
 
-      # not entirely sure why the following line needs a trailing \n
-      pattern = tku.tokenize_stmt(f'{variable_name}.append(VALUE)\n')
-      prefix, suffix = tku.split_pattern(pattern, 'VALUE')
-      statement = prefix + compiled_toks + suffix
-      compiled.extend(statement)
+  indent_depth = 0
+  for line in lines:
 
-    if util.prefix_is(tokens, parameters.template_builder_close):
-      tokens = consume_prefix(tokens, parameters.template_builder_close)
-      break
+    # interpolated python code
+    if line.strip().startswith('>>> '):
+      python_code = line[len('>>> '):]
+      compiled.extend(tku.tokenize_stmt(python_code))
+      compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
+
+      needs_indent = line.strip().endswith(':')
+      if needs_indent:
+        whitespace = indents[-1] + ' '
+        indents.append(whitespace)
+        compiled.append(tku.dtok.new(tk.INDENT, whitespace))
+
+    elif line.strip() == '<<<':
+      compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
+      compiled.append(tku.dtok.new(tk.DEDENT, ''))
+      indents.pop(-1)
 
     else:
-      compiled.append(tokens.pop(0))
+      content = tku.tokenize_expr(repr_template_content(line + '\n'))
+      # not entirely sure why the following line needs a trailing \n
+      pattern = tku.tokenize_stmt(f'{template_name}.append(VALUE)\n')
+      prefix, suffix = tku.split_pattern(pattern, 'VALUE')
+      statement = prefix + content + suffix
+      compiled.extend(statement)
 
-  closing_statement = tku.tokenize_stmt(f"{variable_name} = ''.join({variable_name})")
+  # consume the template closing syntax
+  tokens = consume_prefix(tokens, parameters.template_builder_close)
+
+  closing_statement = tku.tokenize_stmt(f"{template_name} = ''.join({template_name})")
   compiled.extend(closing_statement)
 
   return compiled, tokens
@@ -202,20 +196,31 @@ def compile_tokens(tokens):
 
   compiled = []
 
+  # Keep track of the indentation
+  # Each time an indent is reached, push the indentation
+  # text (i.e. the actual whitespace) onto this stack
+  # Each time a dedent is reached, pop the most recent value
+  # off of the stack
+  indents = []
+
   while tokens:
+    token = tokens[0]
 
     if util.prefix_is(tokens, parameters.template_literal_open):
       compiled_toks, tokens = compile_template_literal(tokens)
       compiled.extend(compiled_toks)
 
     elif util.prefix_is(tokens, parameters.template_builder_open_left):
-      compiled_toks, tokens = compile_template_builder(tokens)
+      compiled_toks, tokens = compile_template_builder(tokens, indents)
       compiled.extend(compiled_toks)
 
-    elif is_template_comment(tokens[0]):
-      # Found a template comment outside of a template
-      raise UnplateSyntaxError.from_token(tokens[0], file_loc,
-        f"This line appears to contain a comment intended to be within an Unplate template, but the line is outside of any templates.")
+    if token.type == tk.INDENT:
+      indents.append(token.string)
+      compiled.append(tokens.pop(0))
+
+    elif token.type == tk.DEDENT:
+      indents.pop(-1)
+      compiled.append(tokens.pop(0))
 
     else:
       compiled.append(tokens.pop(0))

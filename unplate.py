@@ -2,10 +2,9 @@ import compile as unplate_compile
 import tokenize_util as tku
 import util
 
+
 def template(*args, **kwargs):
   raise Exception("Something's gone wrong. You should never actually invoke unplate.template().")
-
-
 
 
 """
@@ -17,7 +16,7 @@ Top-level Unplate API.
 >>>   exec(unplate.compile(__file__))
 >>> else:
 >>>   template = unplate.template(
->>>     #$ Here's my template
+>>>     # Here's my template
 >>>   )
 
 First, the main exec() call is run, executing
@@ -35,6 +34,7 @@ This means that any code not within the `if` block
 will be executed twice!
 
 """
+
 
 true = True
 
