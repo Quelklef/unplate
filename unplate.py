@@ -13,25 +13,23 @@ Top-level Unplate API.
 
 >>> import unplate
 >>> if unplate.true:
->>>   exec(unplate.compile(__file__))
+>>>   exec(unplate.compile(__file__), globals(), locals())
 >>> else:
 >>>   template = unplate.template(
 >>>     # Here's my template
 >>>   )
 
-First, the main exec() call is run, executing
-the compiled code with processed templates.
+unplate.true always evaluates to True.
 
-Then, the program continues. The `if unplate.wrapper:`
-block is encountered. However, `unplate.wrapper` is
-always False, so this code never runs.
-
-In this manner, we avoid the problem of running
-code twice: once during the main exec() call,
-and then once after that exec() call finishes.
-
-This means that any code not within the `if` block
-will be executed twice!
+This enters the first block and means that the
+second block (the else: block) is never run.
+The call to unplate.compile reads the file source
+code, compiles the unplate templates, and
+returns native Python source. This is then
+executed by the call to exec().
+Additionally, the return value of unplate.compile
+has all instances of "unplate.true" replaced
+with False in order to prevent infinite recursion.
 
 """
 

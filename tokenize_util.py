@@ -112,9 +112,10 @@ def untokenize(tokens):
 
 def split_pattern(pattern_toks, marker):
   """
-  Take a pattern and a marker, which are both snippets of Python code.
+  Take a pattern and a marker.
+  The pattern should be a list of dtoks and the marker should be
+  a small bit of Python code (usually a variable name).
   Tokenize both and return the pattern split around the marker.
-  Detaches all returned tokens.
 
   For instance:
     split_pattern(tokenize_expr("list[IDX]"), "IDX")
