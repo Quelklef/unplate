@@ -162,7 +162,7 @@ def compile_template_builder(tokens, indents):
 
       needs_indent = line.strip().endswith(':')
       if needs_indent:
-        whitespace = indents[-1] + ' '
+        whitespace = ''.join(indents) + ' '
         indents.append(whitespace)
         compiled.append(tku.dtok.new(tk.INDENT, whitespace))
 
