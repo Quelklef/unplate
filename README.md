@@ -106,3 +106,49 @@ Surely the situation isn't this way for no reason. I think probably the reason t
 However, need it be so painful?
 
 I say no! With Unplate, you still _can_ separate data and display: just keep your template logic to a minimum. Unplate does make it easier to break this rule, but it's still possible---and encouraged---to follow it.
+
+## How?
+
+Long story short, being really naughty. Unplate abuses the extremely dynamic nature of Python (in particular, the existence of `exec`) in order to work.
+
+We'll look at a short example.
+
+```python
+import unplate
+if unplate.true:
+  exec(unplate.compile(__file__), globals(), locals()
+else:
+  # art by Linda Ball from https://www.asciiart.eu/animals/dogs
+  ascii_dog = unplate.template(
+    #    __    __
+    # o-''))_____\\
+    # "--__/ * * * )
+    # c_c__/-c____/ 
+  )
+```
+
+The first thing to note is that `unplate.true` always evaluates to `True`. Thus, the code in the `else:` block never gets executed.
+
+Instead, `unplate.compile(__file__)` reads your source code, turns all the Unplate comments into functional Python code, and returns this Python code. This is then passed to `exec`, which executes it.
+
+In this case, the result of `unplate.compile(__file__)` will look something like this:
+
+```
+import unplate
+if False:
+  exec(unplate.compile(__file__), globals(), locals()
+else:
+  # art by Linda Ball from https://www.asciiart.eu/animals/dogs
+  ascii_dog = (
+"""   __    __
+o-''))_____\\
+"--__/ * * * )
+c_c__/-c____/ 
+""")
+```
+
+Two changes have been made. Firstly, `unplate.true` has been replaced with `False`. This is to prevent an infinite recursion of calls to `unplate.compile`. Secondly, the template has been transformed into a native Python multiline string. This code is now executed, doing what you wanted---making an ascii dog!
+
+This, in short, is how Unplate works. Template builders are, of course, somewhat more complex---but they rely on the same principles.
+
+Unplate attempts to preserve line numbers---this is why the string literal is surrounded by some awkward parentheses---but column numbers for code within templates is not necessarily preserved.
