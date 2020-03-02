@@ -77,6 +77,10 @@ def read_template_body(tokens):
 
   comments = [tok for tok in comment_block if tok.type is tk.COMMENT]
 
+  for comment in comments:
+    if not comment.string.startswith('# '):
+      raise UnplateSyntaxError.from_token(comments[0], "Spaces are mandated after '#' in templates.")
+
   # [2:] to strip leading space
   lines = [comment.string[2:] for comment in comments]
   rest_tokens = tokens[len(comment_block):]
@@ -149,13 +153,18 @@ def compile_template_builder(tokens, indents):
   while tokens[0].type == tk.NEWLINE:
     tokens.pop(0)
 
+  body_token = tokens[0]
   lines, tokens = read_template_body(tokens)
 
   indent_depth = 0
   for line in lines:
 
     # interpolated python code
-    if line.strip().startswith('>>> '):
+    if line.strip().startswith('>>>'):
+
+      if not line.strip().startswith('>>> '):
+        raise UnplateSyntaxError.from_token(body_token, "A space is required after '>>>'")
+
       python_code = line[len('>>> '):]
       compiled.extend(tku.tokenize_stmt(python_code))
       compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
@@ -166,7 +175,11 @@ def compile_template_builder(tokens, indents):
         indents.append(whitespace)
         compiled.append(tku.dtok.new(tk.INDENT, whitespace))
 
-    elif line.strip() == '<<<':
+    elif line.strip().startswith('<<<'):
+
+      if line.strip() != '<<<':
+        raise UnplateSyntaxError.from_token(body_token, "Nothing is allowed on a line with '<<<'")
+
       compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
       compiled.append(tku.dtok.new(tk.DEDENT, ''))
       indents.pop(-1)
