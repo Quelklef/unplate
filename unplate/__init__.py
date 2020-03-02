@@ -1,6 +1,6 @@
-import compile as unplate_compile
-import tokenize_util as tku
-import util
+import unplate.compile as unplate_compile
+import unplate.tokenize_util as tku
+import unplate.util
 
 
 def template(*args, **kwargs):

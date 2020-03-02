@@ -5,6 +5,8 @@ A minimal Python templating engine for people who don't like templating engines.
 
 Think "templating engine", but instead of _interfacing with_ Python, Unplate is rather _embedded within_ Python.
 
+Unplate is on PyPI: `python3 -m pip install unplate`.
+
 ### Example: Template Literal
 
 The simplest type of template is a _template literal_. It is denoted with `unplate.template(my_template)`, where the template is written in comments. Interpolation is supported, f-string style.

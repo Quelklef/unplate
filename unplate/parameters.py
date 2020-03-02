@@ -1,5 +1,5 @@
-import tokenize_util as tku
-import util
+import unplate.tokenize_util as tku
+import unplate.util
 
 template_literal_pattern = tku.tokenize_expr('unplate.template(\nBODY)')
 template_literal_open, template_literal_close = tku.split_pattern(template_literal_pattern, 'BODY')
