@@ -64,38 +64,165 @@ def compile_top(tokens, *, file_loc):
 def read_template_body(tokens):
   """
   Consume one or more contiguous comments, or a single string.
-  Find the containd text.
+  Find the contained text.
+  In the case of a string, assert that the leading character is
+  a newline, and return it.
   """
 
   if tokens[0].type == tk.STRING:
-    return tokens[0].string, tokens[1:]
+    code = tokens[0].string
 
-  comment_block = list(it.takewhile(
-    lambda tok: tok.type in [tk.NL, tk.COMMENT],
-    tokens
-  ))
+    is_multiline_string = len(set(code[:3])) == 1
+    if is_multiline_string:
+      content = code[3:-3]
+    else:
+      content = code[1:-1]
 
-  comments = [tok for tok in comment_block if tok.type is tk.COMMENT]
+    if content[0] != '\n':
+      raise UnplateSyntaxError.from_token(tokens[0],
+        "A template using a Python string literal must begin with a newline.")
 
-  for comment in comments:
-    if not comment.string.startswith('# '):
-      raise UnplateSyntaxError.from_token(comments[0], "Spaces are mandated after '#' in templates.")
+    if content[-1] != '\n':
+      raise UnplateSyntaxError.from_token(tokens[0],
+        "A template using a Python string literal must end with a newline.")
 
-  # [2:] to strip leading space
-  lines = [comment.string[2:] for comment in comments]
-  rest_tokens = tokens[len(comment_block):]
-  return lines, rest_tokens
+    lines = content.split('\n')
+
+    # remove leading newline
+    lines.pop(0)
+    # remove trailing newline
+    lines.pop(-1)
+
+    return lines, tokens[1:]
+
+  else:
+    comment_block = list(it.takewhile(
+      lambda tok: tok.type in [tk.NL, tk.COMMENT],
+      tokens
+    ))
+
+    comments = [tok for tok in comment_block if tok.type is tk.COMMENT]
+
+    for comment in comments:
+      if not comment.string.startswith('# '):
+        raise UnplateSyntaxError.from_token(comments[0], "Spaces are mandated after '#' in templates.")
+
+    # [2:] to strip leading space
+    lines = [comment.string[2:] for comment in comments]
+    rest_tokens = tokens[len(comment_block):]
+    return lines, rest_tokens
 
 
-def repr_template_content(string):
+def repr_with_newlines(string):
   """
-  repr-out a string but preserve newlines.
-  Intended for use injecting the content of a template back
-  into the python source.
+  return the string, passed through repr(), but with
+  newlines intact.
+
+  Thus the string "new\nline" becomes not "new\\nline" but instead
+  a string with a literal newline in it: '''new
+line'''
   """
-  inner = repr(string).replace('\\n', '\n')[1:-1]
-  # TODO: not sure where to place the "make this an f-string" bit of code
-  return f'f"""{inner}"""'
+
+  # single-line string
+  if '\n' not in string:
+    return repr(string)
+
+  # multiline string
+  else:
+    reprd = repr(string)
+
+    # either ' or ", depending on how repr() decides to handle escapes
+    quote_type = reprd[0]
+
+    newlines_returned = reprd.replace('\\n', '\n')
+    multiline_quotes = quote_type * 2 + newlines_returned + quote_type * 2
+    return multiline_quotes
+
+
+def compile_content(string):
+  """
+  Given a string which is the literal content of a template,
+  return the Python code for the runtime interpretation of that string.
+  For instance, given
+
+    "<h1>{{ title }}</h1>"
+
+  returns (something like)
+
+    "<h1>" + str(title) + "</h1>"
+
+  If the given string contains newlines, these will be preserved in the
+  returned code. Thus
+
+    '''first line {{ interpolated }}
+    second line'''
+
+  is mapped to (something like)
+
+    "'first line' + str(interpolated) + '''
+    second line'''"
+
+  """
+
+  # resultant `exprs` will be a sequence of python expressions which
+  # are to be concatenated in the end
+  # For example, exprs may be ['"<h1>"', 'str(title)', '"</h1>"']
+  exprs = []
+
+  # are we in a string or in an interpolated expression?
+  in_expr = False
+
+  # index of the beginning of the current chunk
+  # a chunk is either a section of the string which
+  # is either literal string or interpolated code
+  chunk_start = 0
+
+  def end_chunk():
+    chunk = string[chunk_start:i]
+
+    if in_expr:
+      code = f"str({chunk})"
+    else:
+      code = repr_with_newlines(chunk)
+
+    exprs.append(code)
+
+  i = -1
+  while True:
+    i += 1
+    if i >= len(string):
+      break
+
+    char = string[i]
+    next_char = string[i + 1] if i + 1 < len(string) else None
+
+    if (char, next_char) == ('{', '{'):
+      end_chunk()
+
+      # skip over braces
+      i += 2
+      chunk_start = i
+
+      in_expr = True
+
+    elif in_expr and (char, next_char) == ('}', '}'):
+      end_chunk()
+
+      # skip over braces
+      i += 2
+      chunk_start = i
+
+      in_expr = False
+
+  end_chunk()
+
+  # now we have a bunch of expressions
+  # at runtime, they'll need to be joined together
+  # we'll do that with ''.join()
+  list_expr = '[' + ', '.join(exprs) + ']'
+  code = f"''.join({list_expr})"
+
+  return code
 
 
 def consume_prefix(tokens, literal):
@@ -112,7 +239,7 @@ def compile_template_literal(tokens):
   tokens = consume_prefix(tokens, parameters.template_literal_close)
 
   content = ''.join(line + '\n' for line in lines)
-  compiled = tku.tokenize_expr(repr_template_content(content))
+  compiled = tku.tokenize_expr(compile_content(content))
 
   # Pad compiled code to preserve line numbers
   pad = tku.tokenize_expr('(\n)')
@@ -149,7 +276,7 @@ def compile_template_builder(tokens, indents):
   init_statement = tku.tokenize_stmt(f"{template_name} = []\n")
   compiled.extend(init_statement)
 
-  # Consume trailing newline
+  # Consume leading newline
   while tokens[0].type == tk.NEWLINE:
     tokens.pop(0)
 
@@ -185,7 +312,7 @@ def compile_template_builder(tokens, indents):
       indents.pop(-1)
 
     else:
-      content = tku.tokenize_expr(repr_template_content(line + '\n'))
+      content = tku.tokenize_expr(compile_content(line) + " + '\\n'")
       # not entirely sure why the following line needs a trailing \n
       pattern = tku.tokenize_stmt(f'{template_name}.append(VALUE)\n')
       prefix, suffix = tku.split_pattern(pattern, 'VALUE')
@@ -238,5 +365,6 @@ def compile_tokens(tokens):
     else:
       compiled.append(tokens.pop(0))
 
+  print(tku.untokenize(compiled))
   return compiled, tokens
 
