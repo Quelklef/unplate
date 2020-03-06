@@ -93,3 +93,20 @@ assert template == 'first line\\nlast line\\n', repr(template)
 """
 
   exec(unplate.compile_anon(code))
+
+
+def test__string_templates_indented():
+
+  code = """#newline
+
+if True:
+  [unplate.begin(template)] @ '''
+  no indent
+    one indent
+  no indent
+  ''' [unplate.end]
+
+  assert template == 'no indent\\n  one indent\\nno indent\\n', repr(template)
+"""
+
+  exec(unplate.compile_anon(code))

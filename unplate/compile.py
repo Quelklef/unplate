@@ -61,12 +61,17 @@ def compile_top(tokens, *, file_loc):
   return compiled
 
 
-def read_template_body(tokens):
+def read_template_body(tokens, indents):
   """
   Consume one or more contiguous comments, or a single string.
   Find the contained text.
-  In the case of a string, assert that the leading character is
-  a newline, and return it.
+
+  In the case of comments, require and consume a leading space
+  from the beginning of each comment (e.g.: "# content" -> "content")
+
+  In the case of a string, assert that there are leading and
+  trailing lines are empty (whitspace-only), and remove them.
+  Additonally, un-indent the contents according to the indent stack.
   """
 
   if tokens[0].type == tk.STRING:
@@ -78,22 +83,31 @@ def read_template_body(tokens):
     else:
       content = code[1:-1]
 
-    if content[0] != '\n':
+    lines = content.split('\n')
+
+    if lines[0].strip() != '':
       raise UnplateSyntaxError.from_token(tokens[0],
         "A template using a Python string literal must begin with a newline.")
 
-    if content[-1] != '\n':
+    if lines[-1].strip() != '':
       raise UnplateSyntaxError.from_token(tokens[0],
         "A template using a Python string literal must end with a newline.")
-
-    lines = content.split('\n')
 
     # remove leading newline
     lines.pop(0)
     # remove trailing newline
     lines.pop(-1)
 
-    return lines, tokens[1:]
+    # dedent
+    dedented = []
+    indent = indents[-1] if indents else ''
+    for line in lines:
+      if not line.startswith(indent):
+        raise UnplateSyntaxError.from_token(tokens[0],
+          f"A template using a Python string literal must be indented according to the surrounding block.")
+      dedented.append(line[len(indent):])
+
+    return dedented, tokens[1:]
 
   else:
     comment_block = list(it.takewhile(
@@ -233,9 +247,9 @@ def consume_prefix(tokens, literal):
   return tokens[len(literal):]
 
 
-def compile_template_literal(tokens):
+def compile_template_literal(tokens, indents):
   tokens = consume_prefix(tokens, parameters.template_literal_open)
-  lines, tokens = read_template_body(tokens)
+  lines, tokens = read_template_body(tokens, indents)
   tokens = consume_prefix(tokens, parameters.template_literal_close)
 
   content = ''.join(line + '\n' for line in lines)
@@ -285,7 +299,7 @@ def compile_template_builder(tokens, indents):
     tokens.pop(0)
 
   body_token = tokens[0]
-  lines, tokens = read_template_body(tokens)
+  lines, tokens = read_template_body(tokens, indents)
 
   indent_depth = 0
   for line in lines:
@@ -351,7 +365,7 @@ def compile_tokens(tokens):
     token = tokens[0]
 
     if util.prefix_is(tokens, parameters.template_literal_open):
-      compiled_toks, tokens = compile_template_literal(tokens)
+      compiled_toks, tokens = compile_template_literal(tokens, indents)
       compiled.extend(compiled_toks)
 
     elif util.prefix_is(tokens, parameters.template_builder_open_left):
