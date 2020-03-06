@@ -132,3 +132,15 @@ if True:
 """
 
   exec(unplate.compile_anon(code))
+
+
+def test__indented_blank_lines():
+
+  code = '''#newline
+if cond:
+  [unplate.begin(template)] @ """
+
+  """ [unplate.end]
+'''
+
+  unplate.compile_anon(code)

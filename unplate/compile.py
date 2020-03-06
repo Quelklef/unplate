@@ -93,19 +93,33 @@ def read_template_body(tokens, indents):
       raise UnplateSyntaxError.from_token(tokens[0],
         "A template using a Python string literal must end with a newline.")
 
-    # remove leading newline
+    # remove leading blank line
     lines.pop(0)
-    # remove trailing newline
+    # remove trailing blank line
     lines.pop(-1)
 
     # dedent
     dedented = []
     indent = indents[-1] if indents else ''
     for line in lines:
-      if not line.startswith(indent):
-        raise UnplateSyntaxError.from_token(tokens[0],
-          f"A template using a Python string literal must be indented according to the surrounding block.")
-      dedented.append(line[len(indent):])
+
+      # We make a special exception for lines that are only whitespace.
+      # We want to allow blank lines to be part of an indended block. However,
+      # we don't want to consider all whitespace-only lines as blank lines,
+      # in case there is e.g. an embedded multiline string.
+      # The compromise is to allow all whitespace-only lines, but 'subtract'
+      # the current indent from them, down to a minimum of no indentation.
+      if line.strip() == '':
+        dedented_line = line[len(indent):]
+        dedented.append(dedented_line)
+
+      # normal case:
+      # assert then strip indentation
+      else:
+        if not line.startswith(indent):
+          raise UnplateSyntaxError.from_token(tokens[0],
+            f"A template using a Python string literal must be indented according to the surrounding block.")
+        dedented.append(line[len(indent):])
 
     return dedented, tokens[1:]
 
