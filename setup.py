@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name                          = "unplate",
-    version                       = "0.2.1",
+    version                       = "0.2.2",
     author                        = "Quelklef",
     author_email                  = "",
     description                   = "A templating language embedded into Python",

@@ -110,3 +110,25 @@ if True:
 """
 
   exec(unplate.compile_anon(code))
+
+
+def test__multiple_indent():
+
+  code = """#newline
+
+if True:
+  if True:
+    if True:
+
+      [unplate.begin(template)] @ '''
+      a
+        b
+      >>> x = 3
+        {{ x }}
+      c
+      ''' [unplate.end]
+
+      assert template == 'a\\n  b\\n  3\\nc\\n', repr(template)
+"""
+
+  exec(unplate.compile_anon(code))
