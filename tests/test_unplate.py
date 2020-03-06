@@ -144,3 +144,19 @@ if cond:
 '''
 
   unplate.compile_anon(code)
+
+
+def test__unbalanced_indentation():
+
+  code = """#newline
+[unplate.begin(template)] @ '''
+
+>>> oops_no_colon
+  >>> stmt
+<<<
+
+''' [unplate.end]
+"""
+
+  with pytest.raises(unplate.UnplateSyntaxError):
+    unplate.compile_anon(code)

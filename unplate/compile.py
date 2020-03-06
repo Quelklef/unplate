@@ -315,7 +315,9 @@ def compile_template_builder(tokens, indents):
   body_token = tokens[0]
   lines, tokens = read_template_body(tokens, indents)
 
-  indent_depth = 0
+  # keep track of how many times we've indended in interpolated code
+  interpolated_indent_depth = 0
+
   for line in lines:
 
     # interpolated python code
@@ -333,6 +335,7 @@ def compile_template_builder(tokens, indents):
         current_indent = indents[-1] if indents else ''
         bumped = current_indent + '  '
         indents.append(bumped)
+        interpolated_indent_depth += 1
         compiled.append(tku.dtok.new(tk.INDENT, bumped))
 
     elif line.strip().startswith('<<<'):
@@ -340,9 +343,13 @@ def compile_template_builder(tokens, indents):
       if line.strip() != '<<<':
         raise UnplateSyntaxError.from_token(body_token, "Nothing is allowed on a line with '<<<'")
 
+      if interpolated_indent_depth == 0:
+        raise UnplateSyntaxError.from_token(body_token, "Too many dedents.")
+
       compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
       compiled.append(tku.dtok.new(tk.DEDENT, ''))
       indents.pop(-1)
+      interpolated_indent_depth -= 1
 
     else:
       content = tku.tokenize_expr(compile_content(line) + " + '\\n'")
