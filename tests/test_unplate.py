@@ -56,7 +56,7 @@ assert t == s + '\\n'
   exec(unplate.compile_anon(code))
 
 
-def test__code_interpolation():
+def test__stmt_interpolation():
 
   code = """#newline
 [unplate.begin(template)]
@@ -84,7 +84,7 @@ assert template == expected, repr(template)
 def test__string_templates():
 
   code = """#newline
-[unplate.begin(template)] '''
+[unplate.begin(template)] @ '''
 first line
 last line
 ''' [unplate.end]

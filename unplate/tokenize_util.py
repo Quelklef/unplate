@@ -38,7 +38,7 @@ class dtok(tk.TokenInfo):
       return True
 
   def __str__(self):
-    return f"{self.type}({repr(self.string)})"
+    return f"{tk.tok_name[self.type]}({repr(self.string)})"
 
   def __repr__(self):
     return f"dtok.new({tk.tok_name[self.type]}, {repr(self.string)})"

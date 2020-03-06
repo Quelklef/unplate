@@ -273,6 +273,10 @@ def compile_template_builder(tokens, indents):
   template_name = tokens.pop(0).string
   tokens = consume_prefix(tokens, parameters.template_builder_open_right)
 
+  # consume @ if present
+  if tokens[0] == tku.dtok.new(tk.OP, '@'):
+    tokens.pop(0)
+
   init_statement = tku.tokenize_stmt(f"{template_name} = []\n")
   compiled.extend(init_statement)
 
@@ -365,6 +369,5 @@ def compile_tokens(tokens):
     else:
       compiled.append(tokens.pop(0))
 
-  print(tku.untokenize(compiled))
   return compiled, tokens
 
