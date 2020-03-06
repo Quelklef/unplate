@@ -316,9 +316,10 @@ def compile_template_builder(tokens, indents):
 
       needs_indent = line.strip().endswith(':')
       if needs_indent:
-        whitespace = ''.join(indents) + ' '
-        indents.append(whitespace)
-        compiled.append(tku.dtok.new(tk.INDENT, whitespace))
+        current_indent = indents[-1] if indents else ''
+        bumped = current_indent + '  '
+        indents.append(bumped)
+        compiled.append(tku.dtok.new(tk.INDENT, bumped))
 
     elif line.strip().startswith('<<<'):
 
