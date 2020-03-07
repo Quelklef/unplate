@@ -285,7 +285,7 @@ def compile_template_builder(tokens, indents):
     # Two line
     # >>> for color in ['red', 'blue']:
       # >>> capitalized = color.upper()
-      # {color} line
+      # {{ color }} line
     # <<<
     [unplate.end]
 
@@ -326,7 +326,7 @@ def compile_template_builder(tokens, indents):
       if not line.strip().startswith('>>> '):
         raise UnplateSyntaxError.from_token(body_token, "A space is required after '>>>'")
 
-      python_code = line[len('>>> '):]
+      python_code = line.lstrip()[len('>>> '):]
       compiled.extend(tku.tokenize_stmt(python_code))
       compiled.append(tku.dtok.new(tk.NEWLINE, '\n'))
 

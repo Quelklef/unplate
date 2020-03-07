@@ -1,6 +1,8 @@
 import pytest
 import unplate
 
+import unplate.tokenize_util as tku
+
 def test__complain_on_missing_space_after_hash():
 
   code = """
@@ -160,3 +162,21 @@ def test__unbalanced_indentation():
 
   with pytest.raises(unplate.UnplateSyntaxError):
     unplate.compile_anon(code)
+
+
+def test__bug_0001():
+
+  code = '''
+if cond:
+  [unplate.begin(template)] @ """
+  >>> if cond:
+        >>> if cond:
+          {{ expr }}
+        <<<
+        {{ expr }}
+  <<<
+  """ [unplate.end]
+'''
+
+  print(unplate.compile_anon(code))
+  tku.tokenize_string(unplate.compile_anon(code))
