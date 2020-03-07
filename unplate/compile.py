@@ -321,9 +321,9 @@ def compile_template_builder(tokens, indents):
   for line in lines:
 
     # interpolated python code
-    if line.strip().startswith('>>>'):
+    if line.lstrip().startswith('>>>'):
 
-      if not line.strip().startswith('>>> '):
+      if not line.lstrip().startswith('>>> '):
         raise UnplateSyntaxError.from_token(body_token, "A space is required after '>>>'")
 
       python_code = line.lstrip()[len('>>> '):]
@@ -338,7 +338,7 @@ def compile_template_builder(tokens, indents):
         interpolated_indent_depth += 1
         compiled.append(tku.dtok.new(tk.INDENT, bumped))
 
-    elif line.strip().startswith('<<<'):
+    elif line.lstrip().startswith('<<<'):
 
       if line.strip() != '<<<':
         raise UnplateSyntaxError.from_token(body_token, "Nothing is allowed on a line with '<<<'")
