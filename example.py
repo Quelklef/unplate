@@ -12,14 +12,14 @@ else:
     # I'm a template literal
     # line two
   )
-  assert template_0 == "I'm a template literal\nline two\n", repr(template_0)
+  assert template_0 == "I'm a template literal\nline two\n"
 
   # Interpolation of Python expressions is supported
   value = list(reversed('interpolation'))
   template_1 = unplate.template(
     # Unplate supports {{ ''.join(reversed(value)) }}
   )
-  assert template_1 == 'Unplate supports interpolation\n', repr(template_1)
+  assert template_1 == 'Unplate supports interpolation\n'
 
   # Templates may be threaded into control flow using
   # template builders:
@@ -33,11 +33,9 @@ else:
   # <<<
   [unplate.end]
 
-  assert template_2 == "One line\nTwo line\nRed line\nBlue line\n", repr(template_2)
+  assert template_2 == "One line\nTwo line\nRed line\nBlue line\n"
 
   # the [braces] around 'unplate.begin()' and 'unplate.end()' do
   # not denote lists or anything like that. They are simply
   # there to add visual saliency to the unplate statements
   # to clearly mark them as special as compared to other statements.
-
-  print("Tests passing!")
