@@ -14,17 +14,12 @@ else:
   )
   assert template_0 == "I'm a template literal\nline two\n", repr(template_0)
 
-  # Interpolation is supported
-  value = 'interpolation'
+  # Interpolation of Python expressions is supported
+  value = list(reversed('interpolation'))
   template_1 = unplate.template(
-    # Unplate supports {value}
+    # Unplate supports {{ ''.join(reversed(value)) }}
   )
   assert template_1 == 'Unplate supports interpolation\n', repr(template_1)
-
-  # The semantics of interpolated templates match
-  # those of Python f-strings.
-  # In fact, interpolated templates compile down into
-  # f-strings.
 
   # Templates may be threaded into control flow using
   # template builders:
@@ -34,7 +29,7 @@ else:
   # Two line
   # >>> for color in ['red', 'blue']:
     # >>> capitalized = color.capitalize()
-    # {capitalized} line
+    # {{ capitalized }} line
   # <<<
   [unplate.end]
 
