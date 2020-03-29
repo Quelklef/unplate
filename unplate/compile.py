@@ -1,8 +1,8 @@
 import tokenize as tk
 import itertools as it
 import unplate.tokenize_util as tku
-import unplate.parameters as parameters
 import unplate.util as util
+from unplate.options import Options
 
 """
 
@@ -42,14 +42,14 @@ class UnplateSyntaxError(SyntaxError):
     )
 
 
-def compile_top(tokens, *, file_loc):
+def compile_top(tokens, options: Options, *, file_loc):
   """
   Top-level compilation function.
   Transform Python + Unplate source tokens into native Python source tokens.
   """
 
   try:
-    compiled, rest = compile_tokens(tokens)
+    compiled, rest = compile_tokens(tokens, options)
   except UnplateSyntaxError as err:
     err.file_loc = file_loc
     raise err
@@ -61,7 +61,7 @@ def compile_top(tokens, *, file_loc):
   return compiled
 
 
-def read_template_body(tokens, indents):
+def read_template_body(tokens, indents, options):
   """
   Consume one or more contiguous comments, or a single string.
   Find the contained text.
@@ -167,7 +167,7 @@ line'''
     return multiline_quotes
 
 
-def compile_content(string):
+def compile_content(string, options):
   """
   Given a string which is the literal content of a template,
   return the Python code for the runtime interpretation of that string.
@@ -261,13 +261,13 @@ def consume_prefix(tokens, literal):
   return tokens[len(literal):]
 
 
-def compile_template_literal(tokens, indents):
-  tokens = consume_prefix(tokens, parameters.template_literal_open)
-  lines, tokens = read_template_body(tokens, indents)
-  tokens = consume_prefix(tokens, parameters.template_literal_close)
+def compile_template_literal(tokens, indents, options):
+  tokens = consume_prefix(tokens, options.template_literal_open)
+  lines, tokens = read_template_body(tokens, indents, options)
+  tokens = consume_prefix(tokens, options.template_literal_close)
 
   content = ''.join(line + '\n' for line in lines)
-  compiled = tku.tokenize_expr(compile_content(content))
+  compiled = tku.tokenize_expr(compile_content(content, options))
 
   # Pad compiled code to preserve line numbers
   pad = tku.tokenize_expr('(\n)')
@@ -276,7 +276,7 @@ def compile_template_literal(tokens, indents):
   return compiled, tokens
 
 
-def compile_template_builder(tokens, indents):
+def compile_template_builder(tokens, indents, options):
   """
   Consume and compile a template builder construct ala
 
@@ -296,10 +296,10 @@ def compile_template_builder(tokens, indents):
 
   compiled = []
 
-  tokens = consume_prefix(tokens, parameters.template_builder_open_left)
+  tokens = consume_prefix(tokens, options.template_builder_open_left)
   # get the name of the result template
   template_name = tokens.pop(0).string
-  tokens = consume_prefix(tokens, parameters.template_builder_open_right)
+  tokens = consume_prefix(tokens, options.template_builder_open_right)
 
   # consume @ if present
   if tokens[0] == tku.dtok.new(tk.OP, '@'):
@@ -313,7 +313,7 @@ def compile_template_builder(tokens, indents):
     tokens.pop(0)
 
   body_token = tokens[0]
-  lines, tokens = read_template_body(tokens, indents)
+  lines, tokens = read_template_body(tokens, indents, options)
 
   # keep track of how many times we've indended in interpolated code
   interpolated_indent_depth = 0
@@ -352,7 +352,7 @@ def compile_template_builder(tokens, indents):
       interpolated_indent_depth -= 1
 
     else:
-      content = tku.tokenize_expr(compile_content(line) + " + '\\n'")
+      content = tku.tokenize_expr(compile_content(line, options) + " + '\\n'")
       # not entirely sure why the following line needs a trailing \n
       pattern = tku.tokenize_stmt(f'{template_name}.append(VALUE)\n')
       prefix, suffix = tku.split_pattern(pattern, 'VALUE')
@@ -360,7 +360,7 @@ def compile_template_builder(tokens, indents):
       compiled.extend(statement)
 
   # consume the template closing syntax
-  tokens = consume_prefix(tokens, parameters.template_builder_close)
+  tokens = consume_prefix(tokens, options.template_builder_close)
 
   closing_statement = tku.tokenize_stmt(f"{template_name} = ''.join({template_name})")
   compiled.extend(closing_statement)
@@ -368,7 +368,7 @@ def compile_template_builder(tokens, indents):
   return compiled, tokens
 
 
-def compile_tokens(tokens):
+def compile_tokens(tokens, options):
   """
   Given Python tokens that represent Python + Unplate code, compile the Unplate code and return results.
   Results will be a mix of unmodified tokens and raw Python code (as strings).
@@ -386,12 +386,12 @@ def compile_tokens(tokens):
   while tokens:
     token = tokens[0]
 
-    if util.prefix_is(tokens, parameters.template_literal_open):
-      compiled_toks, tokens = compile_template_literal(tokens, indents)
+    if util.prefix_is(tokens, options.template_literal_open):
+      compiled_toks, tokens = compile_template_literal(tokens, indents, options)
       compiled.extend(compiled_toks)
 
-    elif util.prefix_is(tokens, parameters.template_builder_open_left):
-      compiled_toks, tokens = compile_template_builder(tokens, indents)
+    elif util.prefix_is(tokens, options.template_builder_open_left):
+      compiled_toks, tokens = compile_template_builder(tokens, indents, options)
       compiled.extend(compiled_toks)
 
     if token.type == tk.INDENT:
