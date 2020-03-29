@@ -27,6 +27,14 @@ class Options:
       default: the tokens for '[unplate.end]'
       The tokens that signify the closing of a template builder
 
+    interpolation_open
+      default: '{{'
+      The string that signifies the start of an interpolated Python expression
+
+    interpolation_close
+      default: '}}'
+      The string that signifies the end of an interpoalted Python expression
+
 
   """
 
@@ -38,5 +46,8 @@ class Options:
     template_builder_open_pattern = tku.tokenize_expr("[unplate.begin(NAME)]")
     self.template_builder_open_left, self.template_builder_open_right = tku.split_pattern(template_builder_open_pattern, 'NAME')
     self.template_builder_close = tku.tokenize_expr('[unplate.end]')
+
+    self.interpolation_open = '{{'
+    self.interpolation_close = '}}'
 
 defaults = Options()

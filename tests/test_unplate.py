@@ -164,6 +164,23 @@ def test__unbalanced_indentation():
     unplate.compile_anon(code)
 
 
+def test__custom_interpolation():
+
+  options = unplate.options.Options()
+  options.interpolation_open = '<PYTHON>'
+  options.interpolation_close = '</PYTHON>'
+
+  code = """#newline
+x = 3
+template = unplate.template(
+  # three is <PYTHON> x </PYTHON> is three
+)
+assert template == 'three is 3 is three\\n', template
+"""
+
+  exec(unplate.compile_anon(code, options))
+
+
 def test__bug_0001():
 
   code = '''
@@ -178,5 +195,4 @@ if cond:
   """ [unplate.end]
 '''
 
-  print(unplate.compile_anon(code))
   tku.tokenize_string(unplate.compile_anon(code))

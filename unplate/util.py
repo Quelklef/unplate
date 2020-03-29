@@ -30,3 +30,12 @@ def replace_sublist(li, target, replacement):
 
 def prefix_is(list, prefix):
   return list[:len(prefix)] == prefix
+
+
+def starts_with(string, substring, *, start: int):
+  """
+  Functionally equivalent to
+    string[start:].startswith(substring)
+  but faster
+  """
+  return string[start : start + len(substring)] == substring

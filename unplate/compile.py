@@ -224,20 +224,20 @@ def compile_content(string, options):
     char = string[i]
     next_char = string[i + 1] if i + 1 < len(string) else None
 
-    if (char, next_char) == ('{', '{'):
+    if util.starts_with(string, options.interpolation_open, start=i):
       end_chunk()
 
-      # skip over braces
-      i += 2
+      # skip over open interpolation
+      i += len(options.interpolation_open)
       chunk_start = i
 
       in_expr = True
 
-    elif in_expr and (char, next_char) == ('}', '}'):
+    elif in_expr and util.starts_with(string, options.interpolation_close, start=i):
       end_chunk()
 
-      # skip over braces
-      i += 2
+      # skip over close interpolation
+      i += len(options.interpolation_close)
       chunk_start = i
 
       in_expr = False
