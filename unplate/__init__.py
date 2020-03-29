@@ -10,33 +10,6 @@ def template(*args, **kwargs):
   raise Exception("Something's gone wrong. You should never actually invoke unplate.template().")
 
 
-"""
-
-Top-level Unplate API.
-
->>> import unplate
->>> if unplate.true:
->>>   exec(unplate.compile(__file__), globals(), locals())
->>> else:
->>>   template = unplate.template(
->>>     # Here's my template
->>>   )
-
-unplate.true always evaluates to True.
-
-This enters the first block and means that the
-second block (the else: block) is never run.
-The call to unplate.compile reads the file source
-code, compiles the unplate templates, and
-returns native Python source. This is then
-executed by the call to exec().
-Additionally, the return value of unplate.compile
-has all instances of "unplate.true" replaced
-with False in order to prevent infinite recursion.
-
-"""
-
-
 true = True
 
 
