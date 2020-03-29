@@ -61,6 +61,26 @@ def compile_top(tokens, options: Options, *, file_loc):
   return compiled
 
 
+def read_string_body(token):
+  """
+  Given a token denoting a string, return the contents
+  of the token without the surrounding quotes.
+  So for a token denoting the code `"I am a string"`, return
+  the string containing `I am a string`.
+  """
+
+  code = token.string
+
+  # strip leading sigils e.g. the 'f' for f-strings
+  code = ''.join(it.dropwhile(lambda char: char not in ['"', "'"], code))
+
+  is_multiline_string = len(set(code[:3])) == 1
+  if is_multiline_string:
+    return code[3:-3]
+  else:
+    return code[1:-1]
+
+
 def read_template_body(tokens, indents, options):
   """
   Consume one or more contiguous comments, or a single string.
@@ -75,14 +95,7 @@ def read_template_body(tokens, indents, options):
   """
 
   if tokens[0].type == tk.STRING:
-    code = tokens[0].string
-
-    is_multiline_string = len(set(code[:3])) == 1
-    if is_multiline_string:
-      content = code[3:-3]
-    else:
-      content = code[1:-1]
-
+    content = read_string_body(tokens[0])
     lines = content.split('\n')
 
     if lines[0].strip() != '':

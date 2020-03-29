@@ -181,6 +181,19 @@ assert template == 'three is 3 is three\\n', template
   exec(unplate.compile_anon(code, options))
 
 
+def test__sigils():
+
+  code = """#newline
+[unplate.begin(template)] @ r'''
+I have a sigil
+''' [unplate.end]
+
+assert template == 'I have a sigil\\n', template
+"""
+
+  exec(unplate.compile_anon(code))
+
+
 def test__bug_0001():
 
   code = '''
