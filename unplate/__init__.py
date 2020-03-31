@@ -6,8 +6,19 @@ import unplate.options
 # export UnplateSyntaxError
 UnplateSyntaxError = unplate_compile.UnplateSyntaxError
 
-def template(*args, **kwargs):
-  raise Exception("Something's gone wrong. You should never actually invoke unplate.template().")
+def __getattr__(name):
+  if name == 'template':
+    err_msg = """
+    unplate.template should never be referenced during runtime.
+    Perhaps you've misspelled a template builder? They are opened like this:
+      [unplate.begin(my_template)]
+    not like this:
+      [unplate.template(my_template)]
+    """
+    raise AttributeError(err_msg)
+
+  if name == 'begin':
+    raise AttributeError("unplate.begin should never be referenced during runtime.")
 
 
 true = True

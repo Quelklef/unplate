@@ -209,3 +209,17 @@ if cond:
 '''
 
   tku.tokenize_string(unplate.compile_anon(code))
+
+
+def test_builder_misspelling():
+
+  code = '''
+[unplate.template(my_template)] @ """
+I'm not correct.
+Template builders begin with `unplate.begin`,
+not `unplate.template`.
+""" [unplate.end]
+'''
+
+  with pytest.raises(AttributeError):
+    exec(unplate.compile_anon(code))
