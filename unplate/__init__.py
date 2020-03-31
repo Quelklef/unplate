@@ -1,3 +1,4 @@
+import builtins
 import unplate.compile as unplate_compile
 import unplate.tokenize_util as tku
 import unplate.util
@@ -29,7 +30,9 @@ def compile(file_loc, options=options.defaults):
   with open(file_loc, 'r') as f:
     code = f.read()
 
-  return compile_code(code, options, file_loc=file_loc)
+  python_code = compile_code(code, options, file_loc=file_loc)
+  # fucked up namespacing by calling this function unplate.compile
+  return builtins.compile(python_code, file_loc, 'exec')
 
 
 def compile_anon(code, options=options.defaults):
